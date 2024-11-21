@@ -1,3 +1,30 @@
+df %>%
+ dplyr::select( gruppo, nefa) %>% 
+  mutate(nefa = scale(nefa)) %>% 
+  group_by(gruppo) %>%
+  summarise(
+    nefa = mean(nefa, na.rm = TRUE))
+
+
+df %>%
+  mutate(gruppo = ifelse(gruppo == "caso", 1, 0))-> df
+
+summary(lm(nefa ~  gruppo, family = "gaussian" , data =df))
+
+t.test(nefa~gruppo, data = df)
+
+
+invlogit(1.5)
+
+
+summary(glm(gruppo ~ nefa, family = "binomial" , data =df))
+
+aov(nefa~gruppo, data = df)
+
+
+
+
+
 pkg()
 library(MASS)
 library(mda)
@@ -10,9 +37,7 @@ dt <- read_excel(here("dati", "DATASET per articolo_17.10.2024(1).xlsx"))
 
 
 dt %>%  clean_names() %>% 
-  
-  mutate(#across(13:36, ~scale(.)), 
-         gruppo = as.factor(gruppo))-> df
+  mutate(gruppo = ifelse(gruppo == "caso", 1, 0))-> df
 
   
 
@@ -23,6 +48,7 @@ df <- df[,  c(1,  13:36)]
  
 
 df<- as.data.frame(df)
+
 
 
 
@@ -74,7 +100,12 @@ dt %>%  clean_names() %>%
   
   bind_cols(
     res$ind$coord
-  ) %>%  data.frame()-> dt_score
+  ) %>%  data.frame() %>% 
+  
+  mutate(Dim.1 = -1*Dim.1,
+         Dim.2 = -1*Dim.2,
+         Dim.3 = -1*Dim.3,
+         Dim.4 = -1*Dim.4) -> dt_score
 
 
 mod.com <- glm(gruppo ~ Dim.1+Dim.2+Dim.3+Dim.4 + age_year, family = binomial, data =dt_score)
@@ -86,6 +117,16 @@ library(gtsummary)
 t1 <- tbl_regression(mod.com, exponentiate = TRUE)
 
 
+dt_score %>% 
+  dplyr::select(gruppo, Dim.1, Dim.2, Dim.3, Dim.4) %>% 
+pivot_longer(cols = 2:5, values_to = "loading", names_to = "PC") %>% 
+  
+  ggplot()+
+  aes(x = gruppo, 
+      y = loading)+
+  facet_wrap(~PC)+
+  
+  geom_boxplot()
 
 
 
@@ -121,7 +162,7 @@ load_plot %>%
   filter(PC == "Dim.1", 
          abs(loading) >= 0.4) %>% View()
   
-
+library(flextable)
 
 df.load %>% data.frame() %>% 
   mutate(variabili = rownames(df.load)) %>%  
